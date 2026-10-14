@@ -109,25 +109,36 @@ h1, .display {
 .bar-link { font-size: var(--size-small); font-weight: 600; text-decoration: none; padding: 10px 12px; border-radius: 999px; transition: background-color .18s var(--ease); }
 .bar-link:hover { background: var(--raise); }
 
-/* Star: GitHub mark and label; once someone has starred, the count flicks up into a lime disc like a device avatar. */
+/* Star: a soft pill like the other buttons; once someone has starred, the count pops into a lime bubble at its end. */
 .star {
-  display: inline-flex; align-items: center; gap: 10px;
-  min-height: 44px; padding: 4px 14px; border-radius: 999px;
-  font-size: var(--size-small); font-weight: 600; text-decoration: none;
-  transition: background-color .18s var(--ease);
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 6px 20px 6px 16px; border-radius: 999px;
+  background: var(--raise-2); color: var(--ink);
+  font-size: var(--size-small); font-weight: 600; line-height: 1.2; text-decoration: none; white-space: nowrap;
+  transition: transform .18s var(--ease), background-color .18s var(--ease);
 }
-.star:hover { background: var(--raise); }
-.star.has-count { padding-left: 4px; }
-.star-disc {
+.star:hover { background: color-mix(in srgb, var(--raise-2) 80%, var(--ink)); }
+.star:active { transform: scale(.96); }
+.star.has-count { padding-right: 6px; }
+.star-n {
   display: none; place-items: center;
-  min-width: 36px; height: 36px; padding: 0 10px; border-radius: 999px;
+  min-width: 32px; height: 32px; margin-left: 4px; padding: 0 9px; border-radius: 999px;
   background: var(--accent); color: var(--on-accent);
-  font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+  font-weight: 750; font-variant-numeric: tabular-nums;
 }
-.star.has-count .star-disc { display: grid; animation: flick-in .45s var(--ease) both; }
+.star.has-count .star-n { display: grid; animation: flick-in .45s var(--ease) both; }
 @keyframes flick-in { from { opacity: 0; transform: translateY(60%) scale(.6); } to { opacity: 1; transform: none; } }
-.star-label, .foot-links a { display: inline-flex; align-items: center; gap: 6px; }
 .gh { width: 18px; height: 18px; fill: currentColor; flex: none; }
+
+.theme-btn {
+  display: grid; place-items: center; width: 44px; height: 44px; flex: none;
+  border: 0; border-radius: 50%; background: transparent; color: var(--ink);
+  transition: background-color .18s var(--ease), transform .18s var(--ease);
+}
+.theme-btn:hover { background: var(--raise); }
+.theme-btn:active { transform: scale(.92); }
+.theme-btn svg { width: 20px; height: 20px; animation: theme-turn .4s var(--ease) both; }
+@keyframes theme-turn { from { opacity: 0; transform: rotate(-60deg) scale(.6); } to { opacity: 1; transform: none; } }
 
 /* Stage */
 main { padding: 0 var(--gutter); }
@@ -336,9 +347,23 @@ body.is-dragging .peer .peer-actions { display: none; }
   display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px;
   font-size: var(--size-small); color: var(--ink-2);
 }
-.foot-links { display: flex; flex-wrap: wrap; gap: 4px 20px; }
-.foot-links a { color: var(--ink); font-weight: 600; border-radius: 4px; transition: background-color .18s var(--ease), color .18s var(--ease); }
-.foot-links a:hover { background: var(--accent); color: var(--on-accent); text-decoration-color: transparent; }
+.foot-row { align-items: center; }
+.foot-row a:not(.maker) { color: var(--ink); font-weight: 600; }
+
+/* Credit: shaped like a nearby-device card, with the GitHub mark as its avatar. */
+.maker {
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 8px 20px 8px 8px; border-radius: 999px;
+  background: var(--raise); color: var(--ink); text-decoration: none;
+  transition: background-color .18s var(--ease), transform .18s var(--ease);
+}
+.maker:hover { background: var(--raise-2); }
+.maker:active { transform: scale(.97); }
+.maker-avatar { background: var(--ink); color: var(--ground); transition: background-color .18s var(--ease), color .18s var(--ease); }
+.maker:hover .maker-avatar { background: var(--accent); color: var(--on-accent); }
+.maker-text { display: grid; line-height: 1.25; }
+.maker-name { font-weight: 650; }
+.maker-user { color: var(--ink-2); }
 
 /* Link sheet (floats, so it may cast a shadow) */
 .sheet {
@@ -396,6 +421,10 @@ body.is-dragging .peer .peer-actions { display: none; }
 @media (max-width: 600px) {
   :root { --radius: 24px; }
   .bar-link { display: none; }
+  .star-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .star { padding: 6px 13px; gap: 6px; }
+  .bar-nav { gap: 4px; }
+  .star.has-count { padding: 6px 6px 6px 13px; }
   .lede { font-size: 1.125rem; }
   .me { grid-template-columns: auto minmax(0, 1fr); padding: 18px; gap: 14px; }
   .me .avatar { width: 48px; height: 48px; }

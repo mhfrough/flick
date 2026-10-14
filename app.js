@@ -69,6 +69,8 @@
     desktop: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/>',
     file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
+    moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
   }
   const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.file}</svg>`
 
@@ -969,24 +971,55 @@
 
   /* ---------- GitHub stars ---------- */
 
-  // One unauthenticated request an hour at most (GitHub allows 60 per hour per address).
-  // On any failure the disc keeps its star icon and the link still works.
-  async function loadStars() {
-    const KEY = 'flick-stars', HOUR = 3600e3
-    let n = null
-    try { const c = JSON.parse(localStorage.getItem(KEY)); if (c && Date.now() - c.t < HOUR) n = c.n } catch {}
-    if (n === null) {
-      try {
-        const res = await fetch('https://api.github.com/repos/mhfrough/flick')
-        if (res.ok) n = (await res.json()).stargazers_count
-        if (typeof n === 'number') try { localStorage.setItem(KEY, JSON.stringify({ n, t: Date.now() })) } catch {}
-      } catch {}
-    }
-    if (typeof n !== 'number' || n < 1) return
+  // Shows the last known count straight away, then asks GitHub again if that count is over
+  // five minutes old or zero (at most 12 requests an hour; GitHub allows 60 without a token).
+  // On any failure the button simply has no count.
+  function showStars(n) {
+    const link = $('#starLink')
+    link.classList.toggle('has-count', n > 0)
     $('#starCount').textContent = n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(n)
-    $('#starLink').querySelector('.sr-only').textContent = ` Flick on GitHub, ${n} ${n === 1 ? 'star' : 'stars'}`
-    requestAnimationFrame(() => $('#starLink').classList.add('has-count'))
+    link.querySelector('.star-sr').textContent = n > 0 ? `, ${n} ${n === 1 ? 'star' : 'stars'}` : ''
   }
+
+  async function loadStars() {
+    const KEY = 'flick-stars', FRESH = 5 * 60e3
+    let cached = null
+    try { cached = JSON.parse(localStorage.getItem(KEY)) } catch {}
+    if (cached && typeof cached.n === 'number') showStars(cached.n)
+    if (cached && cached.n > 0 && Date.now() - cached.t < FRESH) return
+    try {
+      const res = await fetch('https://api.github.com/repos/mhfrough/flick', { cache: 'no-store' })
+      const n = res.ok ? (await res.json()).stargazers_count : null
+      if (typeof n !== 'number') return
+      try { localStorage.setItem(KEY, JSON.stringify({ n, t: Date.now() })) } catch {}
+      showStars(n)
+    } catch {}
+  }
+
+  /* ---------- theme ---------- */
+
+  // Follows the system until you pick; picking the system's own choice goes back to following it.
+  const darkQuery = matchMedia('(prefers-color-scheme: dark)')
+  const isDark = () => (document.documentElement.dataset.theme || (darkQuery.matches ? 'dark' : 'light')) === 'dark'
+
+  function renderTheme() {
+    const dark = isDark(), btn = $('#themeBtn'), label = dark ? 'Switch to light mode' : 'Switch to dark mode'
+    btn.innerHTML = icon(dark ? 'sun' : 'moon')
+    btn.setAttribute('aria-label', label)
+    btn.title = label
+    const ground = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim()
+    for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.content = ground
+  }
+
+  $('#themeBtn').addEventListener('click', () => {
+    const next = isDark() ? 'light' : 'dark'
+    const system = darkQuery.matches ? 'dark' : 'light'
+    if (next === system) delete document.documentElement.dataset.theme
+    else document.documentElement.dataset.theme = next
+    try { next === system ? localStorage.removeItem('flick-theme') : localStorage.setItem('flick-theme', next) } catch {}
+    renderTheme()
+  })
+  darkQuery.addEventListener?.('change', renderTheme)
 
   /* ---------- start ---------- */
 
@@ -995,6 +1028,7 @@
   renderBoard()
   renderInboxChrome()
   reveal()
+  renderTheme()
   loadStars()
   if (sharedIn) $('#shareText').value = sharedIn
   $('#hereLink').href = location.origin + location.pathname
@@ -1012,7 +1046,4 @@
   if (hashCode) joinLink(hashCode)
   joinNetwork()
 
-  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}))
-  }
 })()

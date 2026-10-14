@@ -36,10 +36,10 @@ Bluetooth is not an option for a website: Web Bluetooth can only connect to Blue
 | `styles.css` | All styling (light and dark) |
 | `net.js` | Discovery and connections: tiny MQTT client, encrypted signalling, WebRTC |
 | `app.js` | The app: devices, share-with-everyone board, transfers, inbox |
-| `sw.js`, `manifest.json`, `icon.svg` | Installable PWA, works offline once loaded |
+| `icon.svg` | Favicon |
 | `vendor/qrcode.min.js` | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT), the only third-party code |
 
-Apart from the services above, the page makes one other request: the star count in the header comes from the GitHub API (`api.github.com`), at most once an hour.
+Apart from the services above, the page makes one other request: the star count in the header comes from the GitHub API (`api.github.com`), refreshed at most every five minutes.
 
 ## Run it locally
 
