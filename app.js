@@ -13,7 +13,6 @@
 (() => {
   'use strict'
 
-  const QR = window.QR && (window.QR.default || window.QR)
   const CHUNK = 64 * 1024
   const READ_BLOCK = 4 * 1024 * 1024
   const HIGH_WATER = 8 * 1024 * 1024
@@ -922,6 +921,20 @@
     renderStatus()
   }
 
+  // The QR library is only needed for the link sheet, so it loads the first time someone reaches for it.
+  let qrLib = null
+  function loadQR() {
+    qrLib ||= new Promise(resolve => {
+      const script = document.createElement('script')
+      script.src = 'vendor/qrcode.min.js'
+      script.onload = () => resolve(window.QR && (window.QR.default || window.QR))
+      script.onerror = () => { qrLib = null; resolve(null) }
+      document.head.append(script)
+    })
+    return qrLib
+  }
+  for (const id of ['#linkBtn', '#emptyLinkBtn']) $(id).addEventListener('pointerenter', loadQR, { once: true })
+
   const linkUrl = () => `${location.origin}${location.pathname}#r=${linkCode}`
   function openLinkSheet() {
     if (!net) return
@@ -930,12 +943,13 @@
     $('#linkField').value = url
     const box = $('#qrBox')
     box.replaceChildren()
-    if (QR) {
+    loadQR().then(QR => {
+      if (!QR || $('#linkField').value !== url) return
       try {
         const qr = QR(0, 'M'); qr.addData(url); qr.make()
         box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true })
       } catch { box.hidden = true }
-    }
+    })
     $('#shareLink').hidden = !navigator.share
     const dlg = $('#linkDialog')
     if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '')
@@ -960,13 +974,14 @@
     const io = new IntersectionObserver(entries => {
       for (const en of entries) if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target) }
     }, { rootMargin: '0px 0px -8% 0px' })
+    // Measure everything first, then write, so the browser lays out once.
+    const tops = els.map(el => el.getBoundingClientRect().top)
     let i = 0
-    for (const el of els) {
-      const inView = el.getBoundingClientRect().top < innerHeight
+    els.forEach((el, n) => {
       const column = el.parentElement.classList.contains('how-list') ? [...el.parentElement.children].indexOf(el) % 2 : 0
-      el.style.setProperty('--d', `${inView ? i++ * 80 : column * 80}ms`)
+      el.style.setProperty('--d', `${tops[n] < innerHeight ? i++ * 80 : column * 80}ms`)
       io.observe(el)
-    }
+    })
   }
 
   /* ---------- GitHub stars ---------- */

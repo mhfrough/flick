@@ -37,7 +37,9 @@ Bluetooth is not an option for a website: Web Bluetooth can only connect to Blue
 | `net.js` | Discovery and connections: tiny MQTT client, encrypted signalling, WebRTC |
 | `app.js` | The app: devices, share-with-everyone board, transfers, inbox |
 | `icon.svg` | Favicon |
-| `vendor/qrcode.min.js` | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT), the only third-party code |
+| `assets/fonts/` | Bricolage Grotesque (SIL OFL 1.1, licence alongside), served from here rather than Google Fonts |
+| `assets/og-image.jpg`, `robots.txt`, `sitemap.xml` | Share card and search engine files |
+| `vendor/qrcode.min.js` | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT), the only third-party code. Loaded only when the link sheet opens |
 
 Apart from the services above, the page makes one other request: the star count in the header comes from the GitHub API (`api.github.com`), refreshed at most every five minutes.
 

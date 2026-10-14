@@ -6,18 +6,89 @@
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#ecede7" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0f110e" media="(prefers-color-scheme: dark)">
-  <meta name="description" content="Flick files and text to any screen nearby, straight from the browser. No sign-up, no codes, nothing stored on a server.">
-  <meta property="og:title" content="Flick: share files with the screen next to you">
-  <meta property="og:description" content="Open Flick on two devices on the same Wi-Fi and send files or text between them. No sign-up, no codes.">
+  <title>Flick | Share files with the screen next to you</title>
+  <meta name="description" content="Flick sends files and text between phones and computers on the same Wi-Fi, straight from the browser. No sign-up, no codes, nothing stored on a server.">
+  <meta name="author" content="Mohammad Hamza">
+  <meta name="keywords" content="file sharing, share files between devices, send files from phone to computer, AirDrop alternative, AirDrop for Windows and Android, WebRTC file transfer, peer to peer file sharing, no sign-up">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://mhfrough.github.io/flick/">
+  <!-- Social cards. The share image stays JPG on purpose: not every social crawler renders WebP. -->
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Flick">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:url" content="https://mhfrough.github.io/flick/">
+  <meta property="og:title" content="Flick: share files with the screen next to you">
+  <meta property="og:description" content="Open Flick on two devices on the same Wi-Fi and send files or text between them. No sign-up, no codes, nothing uploaded.">
+  <meta property="og:image" content="https://mhfrough.github.io/flick/assets/og-image.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Flick: Flick it to the next screen. Nearby devices ready to receive a file.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Flick: share files with the screen next to you">
+  <meta name="twitter:description" content="Open Flick on two devices on the same Wi-Fi and send files or text between them. No sign-up, no codes, nothing uploaded.">
+  <meta name="twitter:image" content="https://mhfrough.github.io/flick/assets/og-image.jpg">
+  <meta name="twitter:image:alt" content="Flick: Flick it to the next screen. Nearby devices ready to receive a file.">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "@id": "https://mhfrough.github.io/flick/#app",
+        "name": "Flick",
+        "description": "Flick sends files and text between phones and computers on the same Wi-Fi, straight from the browser. No sign-up, no codes, nothing stored on a server.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (runs in a web browser)",
+        "browserRequirements": "Requires a current Chrome, Edge, Firefox or Safari",
+        "url": "https://mhfrough.github.io/flick/",
+        "codeRepository": "https://github.com/mhfrough/flick",
+        "image": "https://mhfrough.github.io/flick/assets/og-image.jpg",
+        "license": "https://opensource.org/licenses/MIT",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "Share files and text with every device on the same Wi-Fi",
+          "Send to one device, like AirDrop",
+          "Private link and QR code for other networks",
+          "Direct, encrypted WebRTC transfer",
+          "No sign-up and no server storage"
+        ],
+        "author": {
+          "@id": "https://mhfrough.github.io/flick/#author"
+        }
+      },
+      {
+        "@type": "Person",
+        "name": "Mohammad Hamza",
+        "url": "https://github.com/mhfrough",
+        "sameAs": [
+          "https://github.com/mhfrough"
+        ],
+        "@id": "https://mhfrough.github.io/flick/#author"
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://mhfrough.github.io/flick/#website",
+        "name": "Flick",
+        "url": "https://mhfrough.github.io/flick/",
+        "inLanguage": "en",
+        "publisher": {
+          "@id": "https://mhfrough.github.io/flick/#author"
+        }
+      }
+    ]
+  }
+  </script>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap">
+  <link rel="preload" as="font" type="font/woff2" href="assets/fonts/BricolageGrotesque-Variable.woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <script>try { const t = localStorage.getItem('flick-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t } catch {}</script>
-  <title>Flick</title>
 </head>
 <body>
   <a class="skip" href="#app">Skip to the app</a>
@@ -149,8 +220,7 @@
 
   <noscript><p class="noscript">Flick needs JavaScript to connect devices.</p></noscript>
 
-  <script src="vendor/qrcode.min.js"></script>
-  <script src="net.js"></script>
-  <script src="app.js"></script>
+  <script src="net.js" defer></script>
+  <script src="app.js" defer></script>
 </body>
 </html>
