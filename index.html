@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ecede7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f110e" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="Flick files and text to any screen nearby, straight from the browser. No sign-up, no codes, nothing stored on a server.">
+  <meta property="og:title" content="Flick: share files with the screen next to you">
+  <meta property="og:description" content="Open Flick on two devices on the same Wi-Fi and send files or text between them. No sign-up, no codes.">
+  <meta property="og:type" content="website">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <title>Flick</title>
+</head>
+<body>
+  <a class="skip" href="#app">Skip to the app</a>
+
+  <header class="bar">
+    <a class="wordmark" href="./" aria-label="Flick, home">Flick</a>
+    <nav class="bar-nav" aria-label="Main">
+      <a class="bar-link" href="#how">How it works</a>
+      <a class="star" id="starLink" href="https://github.com/mhfrough/flick" target="_blank" rel="noopener">
+        <span class="star-disc" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span class="star-n" id="starCount"></span></span>
+        <span class="star-label"><svg class="gh" viewBox="0 0 256 256" aria-hidden="true"><path d="M208.31 75.68A59.78 59.78 0 0 0 202.93 28 8 8 0 0 0 196 24a59.75 59.75 0 0 0-48 24h-24a59.75 59.75 0 0 0-48-24 8 8 0 0 0-6.93 4 59.78 59.78 0 0 0-5.38 47.68A58.14 58.14 0 0 0 56 104v8a56.06 56.06 0 0 0 48.44 55.47A39.8 39.8 0 0 0 96 192v8H72a24 24 0 0 1-24-24 40 40 0 0 0-40-40 8 8 0 0 0 0 16 24 24 0 0 1 24 24 40 40 0 0 0 40 40h24v16a8 8 0 0 0 16 0v-40a24 24 0 0 1 48 0v40a8 8 0 0 0 16 0v-40a39.8 39.8 0 0 0-8.44-24.53A56.06 56.06 0 0 0 216 112v-8a58.14 58.14 0 0 0-7.69-28.32ZM200 112a40 40 0 0 1-40 40h-48a40 40 0 0 1-40-40v-8a41.74 41.74 0 0 1 6.9-22.48 8 8 0 0 0 1.1-7.69 43.81 43.81 0 0 1 .79-33.58 43.88 43.88 0 0 1 32.32 20.06 8 8 0 0 0 6.71 3.69h32.35a8 8 0 0 0 6.74-3.69 43.87 43.87 0 0 1 32.32-20.06 43.81 43.81 0 0 1 .77 33.58 8.09 8.09 0 0 0 1 7.65 41.72 41.72 0 0 1 7 22.52Z"/></svg>Star<span class="sr-only"> Flick on GitHub</span></span>
+      </a>
+      <button class="btn btn-ink" id="linkBtn" type="button">Share a link</button>
+    </nav>
+  </header>
+
+  <main id="app">
+    <div class="stage">
+      <div class="left">
+        <section class="intro reveal">
+          <h1>Flick it to the next&nbsp;screen.</h1>
+          <p class="lede">Open Flick on another phone or computer on the same Wi&#8209;Fi. Share with everyone at once, or pick one device below.</p>
+        </section>
+
+        <section class="me reveal" aria-label="This device">
+          <span class="avatar avatar-me" id="myIcon" aria-hidden="true"></span>
+          <div class="me-text">
+            <p class="me-line">You are <strong id="myName">…</strong></p>
+            <form class="rename" id="renameForm" hidden>
+              <label class="sr-only" for="renameInput">Device name</label>
+              <input id="renameInput" maxlength="32" autocomplete="off" spellcheck="false">
+              <button class="btn btn-ink" type="submit">Save</button>
+            </form>
+            <p class="me-status" id="myStatus" role="status"><i class="pulse" aria-hidden="true"></i><span>Finding your network…</span></p>
+          </div>
+          <button class="btn btn-onaccent" id="renameBtn" type="button">Rename</button>
+        </section>
+
+        <section class="everyone reveal" aria-labelledby="everyoneTitle">
+          <h2 id="everyoneTitle" class="title">Share with everyone nearby</h2>
+          <form class="share-box" id="shareForm">
+            <label class="sr-only" for="shareText">Text to share with everyone nearby</label>
+            <textarea id="shareText" rows="3" maxlength="100000" placeholder="Paste text or a link. Everyone on this Wi‑Fi gets it, including devices that join later."></textarea>
+            <ul class="chips" id="draftFiles" aria-label="Files to share" hidden></ul>
+            <div class="share-row">
+              <button class="btn btn-soft" id="shareAddFiles" type="button">Add files</button>
+              <span class="share-hint">or drag files anywhere onto the page</span>
+              <input id="sharePicker" type="file" multiple hidden>
+              <button class="btn btn-ink" id="shareSubmit" type="submit">Share</button>
+            </div>
+          </form>
+          <ol class="board" id="board" aria-label="Shared by you" hidden></ol>
+        </section>
+
+        <section class="nearby reveal" aria-labelledby="nearbyTitle">
+          <h2 id="nearbyTitle" class="title">Nearby devices</h2>
+          <div class="peer-list" id="peerList"></div>
+          <div class="empty" id="emptyState">
+            <div class="radar" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="empty-text">
+              <p class="empty-lead">Looking for devices on this Wi&#8209;Fi.</p>
+              <p>Open <a id="hereLink" href="./">this page</a> on the other device and it will appear here within a few seconds. Tap a device to send to it alone.</p>
+              <p class="empty-hint" id="emptyHint" hidden>Still nothing? Guest Wi&#8209;Fi, phone hotspots and some office networks keep devices apart. A link works from any network.</p>
+              <button class="btn btn-soft" id="emptyLinkBtn" type="button">Share a link instead</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="inbox reveal" aria-labelledby="inboxTitle">
+        <div class="inbox-head">
+          <h2 id="inboxTitle" class="title">Received</h2>
+          <button class="btn btn-text" id="clearInbox" type="button" hidden>Clear</button>
+        </div>
+        <ol class="inbox-list" id="inboxList" aria-live="polite"></ol>
+        <p class="inbox-empty" id="inboxEmpty">Files and text sent to you land here. You choose what to accept, and nothing is saved until you press Save.</p>
+      </aside>
+    </div>
+
+    <section class="how" id="how" aria-labelledby="howTitle">
+      <h2 id="howTitle" class="display reveal">No sign-up. No cloud.</h2>
+      <dl class="how-list">
+        <div class="reveal"><dt>Open it and you're visible</dt><dd>Each device gets a random name like Brisk Otter. Anyone on the same Wi&#8209;Fi who opens Flick sees it, and sees what you share with everyone.</dd></div>
+        <div class="reveal"><dt>Files go directly</dt><dd>Everything travels over an encrypted WebRTC connection from one browser to the other. Nothing is uploaded or stored anywhere.</dd></div>
+        <div class="reveal"><dt>Brokers only make the introduction</dt><dd>Free public MQTT brokers pass a short handshake so two browsers can find each other. It is encrypted before it leaves the page, and your files and text never go through them.</dd></div>
+        <div class="reveal"><dt>How it finds your Wi&#8209;Fi</dt><dd>Flick asks ipify.org for your network's public address and turns it into a scrambled meeting point. Devices behind the same router land in the same place.</dd></div>
+        <div class="reveal"><dt>Different networks</dt><dd>Share a link or QR code. Whoever opens it joins you directly, from any network.</dd></div>
+        <div class="reveal"><dt>Keep both pages open</dt><dd>Transfers run while both tabs are open. Received files are held in memory until you save them, so very large files work best on a computer.</dd></div>
+      </dl>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p class="foot-mark" aria-hidden="true">Flick</p>
+    <div class="foot-row">
+      <p>Made by Mohammad Hamza. Open source under the MIT licence, with no server of its own.</p>
+      <p class="foot-links">
+        <a href="https://github.com/mhfrough/flick" target="_blank" rel="noopener">Source code</a>
+        <a href="https://github.com/mhfrough" target="_blank" rel="noopener"><svg class="gh" viewBox="0 0 256 256" aria-hidden="true"><path d="M208.31 75.68A59.78 59.78 0 0 0 202.93 28 8 8 0 0 0 196 24a59.75 59.75 0 0 0-48 24h-24a59.75 59.75 0 0 0-48-24 8 8 0 0 0-6.93 4 59.78 59.78 0 0 0-5.38 47.68A58.14 58.14 0 0 0 56 104v8a56.06 56.06 0 0 0 48.44 55.47A39.8 39.8 0 0 0 96 192v8H72a24 24 0 0 1-24-24 40 40 0 0 0-40-40 8 8 0 0 0 0 16 24 24 0 0 1 24 24 40 40 0 0 0 40 40h24v16a8 8 0 0 0 16 0v-40a24 24 0 0 1 48 0v40a8 8 0 0 0 16 0v-40a39.8 39.8 0 0 0-8.44-24.53A56.06 56.06 0 0 0 216 112v-8a58.14 58.14 0 0 0-7.69-28.32ZM200 112a40 40 0 0 1-40 40h-48a40 40 0 0 1-40-40v-8a41.74 41.74 0 0 1 6.9-22.48 8 8 0 0 0 1.1-7.69 43.81 43.81 0 0 1 .79-33.58 43.88 43.88 0 0 1 32.32 20.06 8 8 0 0 0 6.71 3.69h32.35a8 8 0 0 0 6.74-3.69 43.87 43.87 0 0 1 32.32-20.06 43.81 43.81 0 0 1 .77 33.58 8.09 8.09 0 0 0 1 7.65 41.72 41.72 0 0 1 7 22.52Z"/></svg>github.com/mhfrough</a>
+      </p>
+    </div>
+  </footer>
+
+  <dialog class="sheet" id="linkDialog" aria-labelledby="linkTitle">
+    <form method="dialog" class="sheet-inner">
+      <h2 id="linkTitle" class="title">Share a private link</h2>
+      <p>Anyone who opens this link joins you, on any network. Scan it with a phone camera or send the link.</p>
+      <div class="qr" id="qrBox" role="img" aria-label="QR code for the private link"></div>
+      <label class="sr-only" for="linkField">Private link</label>
+      <input class="link-field" id="linkField" readonly>
+      <div class="sheet-actions">
+        <button class="btn btn-ink" id="copyLink" type="button">Copy link</button>
+        <button class="btn btn-soft" id="shareLink" type="button" hidden>Share…</button>
+        <button class="btn btn-text" id="stopLink" type="button">Stop sharing</button>
+        <button class="btn btn-text sheet-close" value="close">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="drop" aria-hidden="true">
+    <div class="drop-card">
+      <p class="drop-title">Drop to share with everyone nearby</p>
+      <p class="drop-sub" id="dropSub"></p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastText"></span><button class="btn btn-onink" id="toastAction" type="button" hidden></button></div>
+
+  <noscript><p class="noscript">Flick needs JavaScript to connect devices.</p></noscript>
+
+  <script src="vendor/qrcode.min.js"></script>
+  <script src="net.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
