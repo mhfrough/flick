@@ -109,26 +109,23 @@ h1, .display {
 .bar-link { font-size: var(--size-small); font-weight: 600; text-decoration: none; padding: 10px 12px; border-radius: 999px; transition: background-color .18s var(--ease); }
 .bar-link:hover { background: var(--raise); }
 
-/* Star: the count sits in a lime disc like a device avatar, and flicks up into place when it arrives. */
+/* Star: GitHub mark and label; once someone has starred, the count flicks up into a lime disc like a device avatar. */
 .star {
   display: inline-flex; align-items: center; gap: 10px;
-  min-height: 44px; padding: 4px 14px 4px 4px; border-radius: 999px;
+  min-height: 44px; padding: 4px 14px; border-radius: 999px;
   font-size: var(--size-small); font-weight: 600; text-decoration: none;
   transition: background-color .18s var(--ease);
 }
 .star:hover { background: var(--raise); }
+.star.has-count { padding-left: 4px; }
 .star-disc {
-  position: relative; display: grid; place-items: center; overflow: hidden;
+  display: none; place-items: center;
   min-width: 36px; height: 36px; padding: 0 10px; border-radius: 999px;
   background: var(--accent); color: var(--on-accent);
   font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -.02em;
-  transition: transform .18s var(--ease);
 }
-.star:active .star-disc { transform: scale(.92); }
-.star-disc svg { position: absolute; width: 18px; height: 18px; fill: currentColor; transition: transform .45s var(--ease), opacity .3s; }
-.star-n { position: absolute; transform: translateY(140%); transition: transform .45s var(--ease); }
-.star.has-count .star-disc svg { transform: translateY(-140%) rotate(-40deg); opacity: 0; }
-.star.has-count .star-n { position: static; transform: none; }
+.star.has-count .star-disc { display: grid; animation: flick-in .45s var(--ease) both; }
+@keyframes flick-in { from { opacity: 0; transform: translateY(60%) scale(.6); } to { opacity: 1; transform: none; } }
 .star-label, .foot-links a { display: inline-flex; align-items: center; gap: 6px; }
 .gh { width: 18px; height: 18px; fill: currentColor; flex: none; }
 
