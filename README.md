@@ -8,6 +8,8 @@ Flick it to the next screen. Share files and text between nearby devices, straig
 - **Share with everyone** (like AirForShare): paste text or add files once and every device on the network gets them, including devices that open Flick later.
 - **Or send to one device** (like AirDrop): tap a device, or drop files on it.
 - **Drag and drop.** Drag files anywhere onto the page and they're shared with everyone at once. Drop them on one device to send to that device only.
+- **Copy and paste.** Paste a screenshot or image (Ctrl+V or Cmd+V, or the Paste button) to share it with everyone, or paste it on a device to send it there. Received images show a preview, with Copy and Save.
+- **Trusted devices.** Tick "Always accept from this device" when you accept a file, and that device's files come straight in from then on. See or remove them under Received → Trusted.
 - **Different networks?** Share a private link or QR code.
 - **Frontend only.** Static files you can host anywhere. No backend, no database, no build step.
 - **Direct and encrypted.** Files go browser to browser over WebRTC. Nothing is uploaded or stored.
@@ -24,7 +26,8 @@ Flick it to the next screen. Share files and text between nearby devices, straig
 
 1. **Finding your Wi-Fi.** Flick asks `api.ipify.org` (fallback `ipv4.icanhazip.com`) for your public IPv4 address. Devices behind the same router share it, so it becomes a meeting point. The address is hashed before use, and the topic name and encryption key are both derived from it.
 2. **Introductions.** Browsers can't reach each other until something passes a few handshake messages (WebRTC signalling). With no server of its own, Flick uses free public MQTT brokers (EMQX, Mosquitto, HiveMQ) through a small built-in MQTT client, all three at once for redundancy. Every message is AES-GCM encrypted in the page first, so brokers see only random bytes on a hashed topic.
-3. **Transfer.** Once connected, devices talk over an RTCDataChannel (DTLS-encrypted). Flick's protocol is JSON control messages plus raw 64 KB binary chunks with back-pressure. Files are always offered first and only sent once the receiver accepts.
+3. **Transfer.** Once connected, devices talk over an RTCDataChannel (DTLS-encrypted). Flick's protocol is JSON control messages plus raw 64 KB binary chunks with back-pressure. Files are always offered first and only sent once the receiver accepts, or straight away if the receiver trusts the sender.
+4. **Trusted devices.** Each browser keeps an ECDSA P-256 key in `localStorage`, and its device id is a hash of the public key. On every connection a device signs both DTLS fingerprints of that connection, so another device on the network can't copy a trusted id or pass someone else's proof along. Trusted ids are saved in `localStorage` too.
 
 Bluetooth is not an option for a website: Web Bluetooth can only connect to Bluetooth gadgets. It cannot advertise, so two browsers can never discover each other over it.
 

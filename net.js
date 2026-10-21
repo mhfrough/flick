@@ -6,7 +6,7 @@
  * using a key derived from the room secret, and the topic name is a hash, so a broker only ever
  * sees noise. Once two browsers are connected, all data flows directly between them.
  *
- * API: FlickNet.create({ selfId, onOpen(peerId, channel), onClose(peerId), onState(brokersUp) })
+ * API: FlickNet.create({ selfId, onOpen(peerId, channel, connection), onClose(peerId), onState(brokersUp) })
  *        .join(key, secret)  .leave(key)  .brokers()
  */
 (() => {
@@ -255,7 +255,7 @@
         p.dc = dc
         dc.binaryType = 'arraybuffer'
         dc.bufferedAmountLowThreshold = 1 << 20
-        dc.onopen = () => { p.open = true; clearTimeout(p.timer); onOpen(id, dc) }
+        dc.onopen = () => { p.open = true; clearTimeout(p.timer); onOpen(id, dc, pc) }
         dc.onclose = () => kill(id)
       }
       if (initiator) wire(pc.createDataChannel('flick', { ordered: true }))

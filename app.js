@@ -41,6 +41,14 @@
     const v = n / 1024 ** i
     return `${v.toFixed(i === 0 || v >= 100 ? 0 : 1)} ${u[i]}`
   }
+  // Long file names keep their start and extension: "17919846465…3339.jpg".
+  const short = (name, max = 28) => {
+    if (name.length <= max) return name
+    const dot = name.lastIndexOf('.')
+    const ext = dot > 0 && name.length - dot <= 8 ? name.slice(dot) : ''
+    const keep = max - ext.length - 1
+    return `${name.slice(0, Math.ceil(keep * .6))}…${name.slice(name.length - ext.length - Math.floor(keep * .4))}`
+  }
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
   const clock = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   // Next paint, or a short timer when the tab is in the background and paints are paused.
@@ -68,6 +76,7 @@
     desktop: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/>',
     file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
+    shield: '<path d="M12 3 5 6v5.5c0 4.2 2.9 7.9 7 9.5 4.1-1.6 7-5.3 7-9.5V6z"/><path d="m9 12 2.2 2.2L15.5 10"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
     moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
   }
@@ -92,6 +101,66 @@
       catch { toast('Copy failed. Select the text and copy it instead.') }
     })
     return b
+  }
+
+  /* ---------- clipboard images ---------- */
+
+  const isImage = f => /^image\//.test(f.type) && !/svg/.test(f.type)
+  const canReadClipboard = !!navigator.clipboard?.read
+  const canCopyImage = !!(navigator.clipboard?.write && window.ClipboardItem)
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)
+  const pasteKeys = isMac ? '⌘V' : 'Ctrl+V'
+
+  // Screenshots arrive as "image.png"; give them a name worth keeping.
+  function namePasted(f, n = 0) {
+    if (f.name && !/^image\.\w+$/i.test(f.name)) return f
+    const d = new Date(), pad = x => String(x).padStart(2, '0')
+    const ext = (f.type.split('/')[1] || 'png').replace('jpeg', 'jpg').replace(/\W.*/, '')
+    const stamp = `${pad(d.getHours())}.${pad(d.getMinutes())}.${pad(d.getSeconds())}`
+    return new File([f], `Pasted image ${stamp}${n ? ` (${n + 1})` : ''}.${ext}`, { type: f.type, lastModified: f.lastModified || Date.now() })
+  }
+
+  function pastedFiles(data) {
+    let files = Array.from(data?.files || [])
+    if (!files.length) files = Array.from(data?.items || []).filter(i => i.kind === 'file').map(i => i.getAsFile()).filter(Boolean)
+    return files.map(namePasted)
+  }
+
+  // The Paste buttons: images become files, otherwise the clipboard's text.
+  async function readClipboard() {
+    try {
+      const files = [], items = await navigator.clipboard.read()
+      for (const item of items) {
+        const type = item.types.find(t => t.startsWith('image/'))
+        if (type) files.push(namePasted(new File([await item.getType(type)], '', { type }), files.length))
+      }
+      if (files.length) return { files }
+      const textItem = items.find(i => i.types.includes('text/plain'))
+      const text = textItem ? await (await textItem.getType('text/plain')).text() : ''
+      if (text.trim()) return { text }
+      toast('Nothing to paste. Copy an image or some text first.')
+    } catch {
+      toast(`Your browser didn't allow reading the clipboard. Press ${pasteKeys} instead.`)
+    }
+    return null
+  }
+
+  // Browsers only take PNG on the clipboard, so other images are redrawn as PNG first.
+  async function asPng(url) {
+    const blob = await (await fetch(url)).blob()
+    if (blob.type === 'image/png') return blob
+    const bmp = await createImageBitmap(blob)
+    const canvas = h('canvas', { width: bmp.width, height: bmp.height })
+    canvas.getContext('2d').drawImage(bmp, 0, 0)
+    return new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('png')), 'image/png'))
+  }
+
+  async function copyImage(f, b) {
+    try {
+      // Safari needs the write to start inside the click, so it gets the PNG as a promise.
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': asPng(f.url) })])
+      b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy' }, 1600)
+    } catch { toast('Copy failed. Save the image instead.') }
   }
 
   /* ---------- this device ---------- */
@@ -121,9 +190,98 @@
   if (!me.name) { me.name = `${pick(ADJ)} ${pick(NOUN)}`; store.set('flick.name', me.name) }
   const helloMsg = () => ({ t: 'hello', name: me.name, kind: me.kind, label: me.label })
 
+  /* ---------- device identity, for trusted devices ---------- */
+
+  // Each browser keeps one signing key, and its device id is a hash of the public half.
+  // A device proves its id by signing both DTLS fingerprints of this very connection, so a
+  // stranger on the same network can neither copy a trusted id nor relay someone else's proof.
+  const ID_KEY = { name: 'ECDSA', namedCurve: 'P-256' }
+  const SIGN = { name: 'ECDSA', hash: 'SHA-256' }
+  const enc = new TextEncoder()
+  const hex = buf => Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('')
+  const toB64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
+  const fromB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0))
+  const deviceId = async pub => hex(await crypto.subtle.digest('SHA-256', fromB64(pub))).slice(0, 32)
+
+  const identity = (async () => {
+    try {
+      const saved = JSON.parse(store.get('flick.identity') || 'null')
+      if (saved?.priv && saved?.pub) return { priv: await crypto.subtle.importKey('jwk', saved.priv, ID_KEY, false, ['sign']), pub: saved.pub }
+      const pair = await crypto.subtle.generateKey(ID_KEY, true, ['sign', 'verify'])
+      const pub = toB64(await crypto.subtle.exportKey('raw', pair.publicKey))
+      store.set('flick.identity', JSON.stringify({ priv: await crypto.subtle.exportKey('jwk', pair.privateKey), pub }))
+      return { priv: pair.privateKey, pub }
+    } catch { return null }
+  })()
+
+  function binding(pc) {
+    const fps = sdp => (sdp || '').match(/^a=fingerprint:.+$/gim)?.map(l => l.slice(14).trim().toUpperCase()) || []
+    const all = [...new Set([...fps(pc?.localDescription?.sdp), ...fps(pc?.remoteDescription?.sdp)])].sort()
+    return all.length >= 2 ? enc.encode(`flick-trust-v1\n${all.join('\n')}`) : null
+  }
+
+  async function sendProof(p) {
+    const self = await identity
+    const data = binding(p.pc)
+    if (!self || !data) return
+    try { ctl(p, { t: 'proof', key: self.pub, sig: toB64(await crypto.subtle.sign(SIGN, self.priv, data)) }) } catch { /* no proof, no trust */ }
+  }
+
+  async function onProof(p, msg) {
+    const data = binding(p.pc)
+    if (p.device || !data || typeof msg.key !== 'string' || typeof msg.sig !== 'string' || msg.key.length > 200 || msg.sig.length > 200) return
+    try {
+      const key = await crypto.subtle.importKey('raw', fromB64(msg.key), ID_KEY, false, ['verify'])
+      if (!await crypto.subtle.verify(SIGN, key, fromB64(msg.sig), data)) return
+      p.device = await deviceId(msg.key)
+    } catch { return }
+    if (!peers.has(p.id)) return
+    rememberPeer(p)
+    renderTrusted()
+    if (p.ready) renderPeer(p)
+    for (const t of incoming.values()) {
+      if (t.peerId !== p.id || t.status !== 'pending') continue
+      if (isTrusted(p)) accept(t)
+      else renderIncoming(t)
+    }
+  }
+
+  /* ---------- trusted devices ---------- */
+
+  // Remembered across restarts: device id -> { name, kind, since }.
+  const trusted = new Map()
+  try { for (const [id, d] of JSON.parse(store.get('flick.trusted')) || []) if (typeof id === 'string' && d) trusted.set(id, d) } catch { /* nothing saved yet */ }
+  const saveTrusted = () => store.set('flick.trusted', JSON.stringify([...trusted]))
+  const isTrusted = p => !!p?.device && trusted.has(p.device)
+
+  // Keeps a trusted device's saved name current when it renames itself.
+  function rememberPeer(p) {
+    const d = isTrusted(p) && trusted.get(p.device)
+    if (!d || !p.ready || (d.name === p.name && d.kind === p.kind)) return
+    d.name = p.name; d.kind = p.kind
+    saveTrusted(); renderTrusted()
+  }
+
+  function trust(p) {
+    if (!p?.device || !p.ready) return
+    trusted.set(p.device, { name: p.name, kind: p.kind, since: Date.now() })
+    saveTrusted()
+    renderPeer(p)
+    renderTrusted()
+    for (const t of incoming.values()) if (t.peerId === p.id && t.status === 'pending') accept(t)
+  }
+
+  function untrust(id) {
+    trusted.delete(id)
+    saveTrusted()
+    for (const p of peers.values()) if (p.device === id && p.ready) renderPeer(p)
+    for (const t of incoming.values()) if (t.status === 'pending') renderIncoming(t)
+    renderTrusted()
+  }
+
   /* ---------- state ---------- */
 
-  const peers = new Map()      // peerId -> { id, dc, ready, name, kind, label, el, ui, out, chain, recv }
+  const peers = new Map()      // peerId -> { id, dc, pc, device, ready, name, kind, label, el, ui, out, chain, recv }
   const outgoing = new Map()   // `${peerId}:${id}` -> transfer we are sending
   const incoming = new Map()   // `${peerId}:${id}` -> transfer we are receiving
   const board = []             // what this device shared with everyone
@@ -139,8 +297,8 @@
 
   /* ---------- connections ---------- */
 
-  function onOpen(id, dc) {
-    const p = { id, dc, ready: false, out: null, chain: Promise.resolve(), recv: null }
+  function onOpen(id, dc, pc) {
+    const p = { id, dc, pc, device: null, ready: false, out: null, chain: Promise.resolve(), recv: null }
     peers.set(id, p)
     dc.onmessage = e => {
       try {
@@ -149,6 +307,7 @@
       } catch (err) { console.warn('[flick] message', err) }
     }
     ctl(p, helloMsg())
+    sendProof(p)
   }
 
   function onClose(id) {
@@ -165,6 +324,7 @@
     for (const item of board) item.reached.delete(id)
     renderBoard()
     renderStatus()
+    renderTrusted()
     keepAwake()
   }
 
@@ -176,6 +336,7 @@
   function onControl(p, msg) {
     if (!msg || typeof msg !== 'object') return
     if (msg.t === 'hello') return onHello(p, msg)
+    if (msg.t === 'proof') return onProof(p, msg)
     if (!p.ready) return
     switch (msg.t) {
       case 'text': return onText(p, msg)
@@ -195,6 +356,7 @@
     p.label = clean(msg.label, 60)
     p.ready = true
     renderPeer(p)
+    rememberPeer(p)
     renderStatus()
     if (!first) return
     toast(`${p.name} is here`)
@@ -209,6 +371,8 @@
     p.ui.icon.innerHTML = icon(p.kind)
     p.ui.name.textContent = p.name
     p.ui.meta.textContent = p.label || 'Nearby device'
+    p.ui.name.title = p.name
+    p.ui.badge.hidden = !isTrusted(p)
     p.ui.drop.textContent = `Drop to send to ${p.name} only`
     p.ui.textarea.setAttribute('aria-label', `Message to ${p.name}`)
     renderOut(p)
@@ -222,7 +386,10 @@
     ui.picker = h('input', { type: 'file', multiple: true, hidden: true, onchange: () => { sendFiles(p, ui.picker.files); ui.picker.value = '' } })
     ui.actions = h('div', { class: 'peer-actions' },
       h('button', { class: 'btn btn-ink', type: 'button', text: 'Send files', onclick: () => ui.picker.click() }),
-      h('button', { class: 'btn btn-soft', type: 'button', text: 'Send text', onclick: () => openComposer(p) }))
+      h('button', { class: 'btn btn-soft', type: 'button', text: 'Send text', onclick: () => openComposer(p) }),
+      canReadClipboard && h('button', { class: 'btn btn-soft', type: 'button', text: 'Paste', onclick: () => pasteTo(p) }))
+    ui.badge = h('p', { class: 'peer-badge', hidden: true, title: 'Files from this device are accepted without asking' },
+      h('span', { icon: 'shield' }), 'Trusted')
     ui.drop = h('p', { class: 'peer-drop' })
 
     ui.statusText = h('p', { class: 'status-text' })
@@ -245,7 +412,7 @@
     })
 
     p.el = h('article', { class: 'peer', 'data-peer': p.id },
-      h('div', { class: 'peer-main' }, ui.icon, h('div', null, ui.name, ui.meta)),
+      h('div', { class: 'peer-main' }, ui.icon, h('div', null, ui.name, ui.meta, ui.badge)),
       ui.actions, ui.drop, ui.status, ui.composer, ui.picker)
     dropTarget(p.el, files => sendFiles(p, files))
     p.ui = ui
@@ -268,6 +435,14 @@
     if (!text.trim()) { p.ui.textarea.focus(); return }
     if (ctl(p, { t: 'text', id: uid(), text })) { closeComposer(p); toast(`Text sent to ${p.name}`) }
     else toast(`Couldn't reach ${p.name}. Try again.`)
+  }
+
+  async function pasteTo(p) {
+    const got = await readClipboard()
+    if (!got || !peers.has(p.id)) return
+    if (got.files) return sendFiles(p, got.files)
+    openComposer(p)
+    p.ui.textarea.value = got.text.slice(0, MAX_TEXT)
   }
 
   function sendFiles(p, list) {
@@ -382,7 +557,7 @@
     const { status, statusText, statusBtn, track, fill } = p.ui
     if (!t) { status.hidden = true; return }
     status.hidden = false
-    const what = t.files.length === 1 ? `“${t.files[0].name}”` : plural(t.files.length, 'file')
+    const what = t.files.length === 1 ? `“${short(t.files[0].name)}”` : plural(t.files.length, 'file')
     const moving = ['waiting', 'queued', 'sending', 'flushing'].includes(t.status)
     statusText.classList.toggle('is-bad', t.status === 'failed' || t.status === 'declined')
     track.classList.toggle('is-wait', t.status === 'waiting' || t.status === 'queued')
@@ -442,7 +617,7 @@
     const ready = readyPeers()
     for (const p of ready) deliver(item, p)
     renderBoard()
-    const what = files.length === 1 ? `“${files[0].name}”` : plural(files.length, 'file')
+    const what = files.length === 1 ? `“${short(files[0].name)}”` : plural(files.length, 'file')
     toast(ready.length ? `Sharing ${what} with ${plural(ready.length, 'device')}` : `${what} ready. Devices that open Flick on this Wi‑Fi will get it.`)
   }
 
@@ -516,6 +691,17 @@
   $('#shareText').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); shareDraft() } })
   $('#shareAddFiles').addEventListener('click', () => $('#sharePicker').click())
   $('#sharePicker').addEventListener('change', () => { addDraftFiles($('#sharePicker').files); $('#sharePicker').value = '' })
+  $('#sharePaste').hidden = !canReadClipboard
+  $('#sharePaste').addEventListener('click', async () => {
+    const got = await readClipboard()
+    if (got?.files) addDraftFiles(got.files)
+    else if (got?.text) pasteText(got.text)
+  })
+  function pasteText(text) {
+    const ta = $('#shareText')
+    ta.value = ((ta.value ? `${ta.value}\n` : '') + text).slice(0, MAX_TEXT)
+    ta.focus()
+  }
 
   /* ---------- incoming ---------- */
 
@@ -547,8 +733,10 @@
     incoming.set(key, t)
     buildFileItem(t)
     addItem(t.el)
+    const what = t.files.length === 1 ? short(t.files[0].name) : plural(t.files.length, 'file')
+    if (isTrusted(p)) { accept(t); notify(`${t.from} is sending ${what}`); return }
     renderIncoming(t)
-    notify(`${t.from} ${t.all ? 'shared' : 'wants to send'} ${t.files.length === 1 ? t.files[0].name : plural(t.files.length, 'file')}`)
+    notify(`${t.from} ${t.all ? 'shared' : 'wants to send'} ${what}`)
   }
 
   function accept(t) {
@@ -675,9 +863,12 @@
     })
     ui.fill = h('i')
     ui.track = h('div', { class: 'track', 'aria-hidden': 'true' }, ui.fill)
+    ui.preview = h('a', { class: 'item-preview', target: '_blank', rel: 'noopener', hidden: true, 'aria-label': 'Open the image full size' })
+    ui.trustBox = h('input', { type: 'checkbox' })
+    ui.trust = h('label', { class: 'trust-check', hidden: true }, ui.trustBox, h('span', { text: 'Always accept from this device' }))
     ui.actions = h('div', { class: 'item-actions' })
     t.ui = ui
-    t.el = h('li', { class: 'item is-new', 'data-key': t.key }, itemHead(t.kind, ui.summary, t.time), ui.list, ui.track, ui.actions)
+    t.el = h('li', { class: 'item is-new', 'data-key': t.key }, itemHead(t.kind, ui.summary, t.time), ui.preview, ui.list, ui.track, ui.trust, ui.actions)
   }
 
   function renderIncoming(t) {
@@ -700,14 +891,25 @@
       row.size.textContent = t.status === 'receiving' && !f.url && f.received ? `${bytes(f.received)} of ${bytes(f.size)}` : bytes(f.size)
       if (f.url && !row.saved) {
         row.saved = true
-        row.slot.replaceChildren(h('a', { class: 'btn btn-soft', href: f.url, download: f.name, text: 'Save' }))
-        if (/^image\//.test(f.type) && !/svg/.test(f.type) && f.size <= PREVIEW_LIMIT) row.thumb.replaceChildren(h('img', { src: f.url, alt: '' }))
+        const image = isImage(f) && f.size <= PREVIEW_LIMIT
+        row.slot.replaceChildren(h('span', { class: 'file-btns' },
+          image && canCopyImage && h('button', { class: 'btn btn-text', type: 'button', text: 'Copy', onclick: e => copyImage(f, e.currentTarget) }),
+          h('a', { class: 'btn btn-soft', href: f.url, download: f.name, text: 'Save' })))
+        if (image) row.thumb.replaceChildren(h('img', { src: f.url, alt: '' }))
+        // A single image gets a big preview, like a photo in a chat.
+        if (image && t.files.length === 1) { ui.preview.href = f.url; ui.preview.replaceChildren(h('img', { src: f.url, alt: f.name })); ui.preview.hidden = false }
       }
     })
 
+    const p = peers.get(t.peerId)
+    ui.trust.hidden = t.status !== 'pending' || !p?.device || isTrusted(p)
+
     const btns = []
     if (t.status === 'pending') {
-      btns.push(h('button', { class: 'btn btn-ink', type: 'button', text: t.all ? 'Download' : 'Accept', onclick: () => accept(t) }))
+      btns.push(h('button', { class: 'btn btn-ink', type: 'button', text: t.all ? 'Download' : 'Accept', onclick: () => {
+        if (ui.trustBox.checked && !ui.trust.hidden) { trust(peers.get(t.peerId)); toast(`Files from ${t.from} will now be accepted without asking`) }
+        accept(t)
+      } }))
       btns.push(h('button', { class: 'btn btn-text', type: 'button', text: t.all ? 'Dismiss' : 'Decline', onclick: () => decline(t) }))
     } else if (t.status === 'receiving') {
       btns.push(h('button', { class: 'btn btn-danger', type: 'button', text: 'Cancel', onclick: () => cancelIn(t) }))
@@ -757,6 +959,31 @@
     renderInboxChrome()
   })
 
+  /* ---------- trusted devices sheet ---------- */
+
+  function renderTrusted() {
+    $('#trustedBtn').hidden = !trusted.size
+    $('#trustedBtn').textContent = `Trusted (${trusted.size})`
+    const list = $('#trustedList')
+    list.replaceChildren(...[...trusted].map(([id, d]) => {
+      const here = [...peers.values()].some(p => p.ready && p.device === id)
+      const since = new Date(d.since).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
+      return h('li', { class: 'trusted-row' },
+        h('span', { class: 'avatar avatar-sm', 'aria-hidden': 'true', icon: d.kind || 'laptop' }),
+        h('div', { class: 'trusted-text' },
+          h('p', { class: 'trusted-name', title: d.name, text: d.name || 'Unnamed device' }),
+          h('p', { class: 'trusted-meta', text: here ? `Nearby now · trusted since ${since}` : `Trusted since ${since}` })),
+        h('button', { class: 'btn btn-text', type: 'button', text: 'Remove', 'aria-label': `Stop trusting ${d.name}`, onclick: () => untrust(id) }))
+    }))
+    $('#trustedEmpty').hidden = trusted.size > 0
+  }
+  $('#trustedBtn').addEventListener('click', () => {
+    renderTrusted()
+    const dlg = $('#trustedDialog')
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '')
+  })
+  $('#trustedDialog').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close() })
+
   /* ---------- status, notifications ---------- */
 
   const readyPeers = () => [...peers.values()].filter(p => p.ready)
@@ -781,6 +1008,7 @@
   function toast(message, action) {
     const el = $('#toast')
     $('#toastText').textContent = message
+    $('#toastText').title = message
     const btn = $('#toastAction')
     btn.hidden = !action
     if (action) { btn.textContent = action.label; btn.onclick = () => { action.run(); el.classList.remove('is-shown') } }
@@ -848,13 +1076,27 @@
     shareFilesNow(e.dataTransfer.files)
   })
 
-  // Pasting outside a text field also goes into "Share with everyone".
+  // Pasting an image on a device tile (its message box included) sends it to that device.
+  // Pasting anywhere else outside other fields goes into "Share with everyone".
   document.addEventListener('paste', e => {
-    if (e.target.closest?.('input, textarea')) return
-    const files = e.clipboardData?.files
+    const files = pastedFiles(e.clipboardData)
+    const tile = e.target.closest?.('.peer')
+    const p = tile && peers.get(tile.dataset.peer)
+    if (p) {
+      if (!files.length) return
+      e.preventDefault()
+      closeComposer(p)
+      return sendFiles(p, files)
+    }
+    if (e.target.closest?.('input, textarea') && e.target.id !== 'shareText') return
+    if (files.length) {
+      e.preventDefault()
+      addDraftFiles(files)
+      toast(`${files.length === 1 ? `“${short(files[0].name)}”` : plural(files.length, 'file')} added. Press Share to send ${files.length === 1 ? 'it' : 'them'} to everyone.`)
+      return
+    }
     const text = e.clipboardData?.getData('text/plain')
-    if (files?.length) addDraftFiles(files)
-    else if (text) { const ta = $('#shareText'); ta.value = (ta.value ? `${ta.value}\n` : '') + text; ta.focus() }
+    if (text && e.target.id !== 'shareText') { e.preventDefault(); pasteText(text) }
   })
 
   /* ---------- rename ---------- */
@@ -869,7 +1111,10 @@
     $('#renameBtn').hidden = true
     const input = $('#renameInput')
     input.value = me.name
-    input.focus(); input.select()
+    input.focus()
+    // Mobile browsers can drop a select() made in the same frame the field appears.
+    input.setSelectionRange(0, input.value.length)
+    requestAnimationFrame(() => input.setSelectionRange(0, input.value.length))
   })
   const closeRename = () => { $('#renameForm').hidden = true; $('.me-line').hidden = false; $('#renameBtn').hidden = false }
   $('#renameForm').addEventListener('submit', e => {
@@ -1042,6 +1287,7 @@
   renderDraft()
   renderBoard()
   renderInboxChrome()
+  renderTrusted()
   reveal()
   renderTheme()
   loadStars()

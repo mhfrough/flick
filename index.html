@@ -136,7 +136,8 @@
             <ul class="chips" id="draftFiles" aria-label="Files to share" hidden></ul>
             <div class="share-row">
               <button class="btn btn-soft" id="shareAddFiles" type="button">Add files</button>
-              <span class="share-hint">or drag files anywhere onto the page</span>
+              <button class="btn btn-soft" id="sharePaste" type="button" hidden>Paste</button>
+              <span class="share-hint">or drag files onto the page, or paste an image</span>
               <input id="sharePicker" type="file" multiple hidden>
               <button class="btn btn-ink" id="shareSubmit" type="submit">Share</button>
             </div>
@@ -162,7 +163,10 @@
       <aside class="inbox reveal" aria-labelledby="inboxTitle">
         <div class="inbox-head">
           <h2 id="inboxTitle" class="title">Received</h2>
-          <button class="btn btn-text" id="clearInbox" type="button" hidden>Clear</button>
+          <div class="inbox-tools">
+            <button class="btn btn-text" id="trustedBtn" type="button" hidden>Trusted</button>
+            <button class="btn btn-text" id="clearInbox" type="button" hidden>Clear</button>
+          </div>
         </div>
         <ol class="inbox-list" id="inboxList" aria-live="polite"></ol>
         <p class="inbox-empty" id="inboxEmpty">Files and text sent to you land here. You choose what to accept, and nothing is saved until you press Save.</p>
@@ -205,6 +209,18 @@
         <button class="btn btn-soft" id="shareLink" type="button" hidden>Share…</button>
         <button class="btn btn-text" id="stopLink" type="button">Stop sharing</button>
         <button class="btn btn-text sheet-close" value="close">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="sheet" id="trustedDialog" aria-labelledby="trustedTitle">
+    <form method="dialog" class="sheet-inner">
+      <h2 id="trustedTitle" class="title">Trusted devices</h2>
+      <p>Files from these devices are accepted without asking. Remove one to be asked again.</p>
+      <ul class="trusted-list" id="trustedList"></ul>
+      <p class="trusted-empty" id="trustedEmpty" hidden>No trusted devices. When someone sends you a file, tick “Always accept from this device”.</p>
+      <div class="sheet-actions">
+        <button class="btn btn-ink sheet-close" value="close">Done</button>
       </div>
     </form>
   </dialog>
