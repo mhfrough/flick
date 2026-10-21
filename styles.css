@@ -364,6 +364,29 @@ body.is-dragging .peer .peer-actions { display: none; }
 .how-list dt { font-size: var(--size-title); font-weight: 650; letter-spacing: -.015em; line-height: 1.2; margin-bottom: 8px; }
 .how-list dd { max-width: 42ch; text-wrap: pretty; }
 
+/* More tools: built like the device tiles, and they light up the same way a tile does under a drop. */
+.more { max-width: 1440px; margin: clamp(96px, 11vw, 160px) auto 0; display: grid; gap: 20px; }
+.more-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.more-card {
+  display: grid; gap: 4px; align-content: start; height: 100%;
+  background: var(--raise); color: var(--ink); border-radius: var(--radius); padding: 22px;
+  text-decoration: none;
+  transition: background-color .2s var(--ease), color .2s var(--ease), transform .25s var(--ease);
+}
+.more-card:hover { background: var(--accent); color: var(--on-accent); transform: scale(1.015); }
+.more-card:active { transform: scale(.98); }
+.more-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
+.more-icon { width: 52px; height: 52px; border-radius: 16px; overflow: hidden; flex: none; }
+.more-go {
+  width: 44px; height: 44px; padding: 12px; border-radius: 50%; flex: none;
+  background: var(--raise-2); color: var(--ink);
+  transition: background-color .2s var(--ease), color .2s var(--ease), transform .25s var(--ease);
+}
+.more-card:hover .more-go { background: var(--on-accent); color: var(--accent); transform: translate(2px, -2px); }
+.more-name { font-size: var(--size-title); font-weight: 650; letter-spacing: -.015em; line-height: 1.15; }
+.more-tag { color: var(--ink-2); font-size: var(--size-small); text-wrap: pretty; }
+.more-card:hover .more-tag { color: inherit; }
+
 /* Footer: the name returns at full width. */
 .foot { margin-top: clamp(120px, 14vw, 200px); padding: 0 var(--gutter) 28px; overflow: hidden; }
 .foot-mark {
@@ -452,6 +475,7 @@ body.is-dragging .peer .peer-actions { display: none; }
   .inbox { position: static; max-height: none; overflow: visible; }
   .how { grid-template-columns: 1fr; }
   .how .display { position: static; max-width: 12ch; }
+  .more-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {
   :root { --radius: 24px; }
@@ -472,6 +496,8 @@ body.is-dragging .peer .peer-actions { display: none; }
   .inbox { padding: 18px; }
   .how-list { grid-template-columns: 1fr; gap: 28px; }
   .composer-hint { display: none; }
+  .more-list { grid-template-columns: minmax(0, 1fr); }
+  .more-card { padding: 18px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
